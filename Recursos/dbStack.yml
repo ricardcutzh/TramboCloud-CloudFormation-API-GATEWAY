@@ -1,0 +1,46 @@
+Description:
+  File in charge of creating DB
+
+Parameters:
+
+  IDTable:
+    Type: String
+    Description: key's table name
+    Default: idTabla
+
+  IDType:
+    Type: String
+    Description: Type of the key
+    Default: S
+
+  Name:
+    Type: String
+    Description: Name for the table
+    Default: Persona
+
+Resources:
+
+  DynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        -
+          AttributeName: !Ref IDTable
+          AttributeType: !Ref IDType
+
+      KeySchema:
+        -
+          AttributeName: !Ref IDTable
+          KeyType: HASH
+
+      ProvisionedThroughput: 
+        ReadCapacityUnits: "5"
+        WriteCapacityUnits: "5"
+        
+      TableName: !Ref Name
+
+Outputs:
+
+  DatabaseDynamo:
+    Description: Dynamo Database created
+    Value: !Ref DynamoDBTable

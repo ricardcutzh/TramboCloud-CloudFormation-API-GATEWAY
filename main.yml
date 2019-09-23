@@ -1,0 +1,56 @@
+Description:
+  Archivo del main Stack
+
+Parameters:
+
+  Template:
+    Type: String
+    Description: Bucket where templates are hosted
+  
+  TableID:
+    Type: String
+    Description: Key's table
+  
+  TypeID:
+    Type: String
+    Description: Key Type
+  
+  NameTable:
+    Type: String
+    Description: name for the table
+
+Resources:
+
+  DynamoStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://s3.amazonaws.com/${Template}/dbStack.yml"
+      Parameters:
+        IDTable: !Ref TableID
+        IDType: !Ref TypeID
+        Name: !Ref NameTable
+      Tags:
+        - Key: Name
+          Value: DynamoDBStack
+  
+
+  LambdaStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://s3.amazonaws.com/${Template}/lambda.yml"
+      Parameters:
+        Nametable: !Ref NameTable
+        IDTable: !Ref TableID
+        Bucket: !Ref Template
+      Tags:
+        - Key: Name
+          Value: LambdaFunctionsStack
+  
+  APIStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://s3.amazonaws.com/${Template}/api.yml"
+      Parameters:
+        FuncAddPerson: !GetAtt LambdaStack.Outputs.InsertFunction
+        FuncGetPersona: !GetAtt LambdaStack.Outputs.GetFunction
+        FuncDeletePersona: !GetAtt LambdaStack.Outputs.DeleteFunction

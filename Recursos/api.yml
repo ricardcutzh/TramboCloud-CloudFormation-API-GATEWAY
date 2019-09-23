@@ -1,0 +1,134 @@
+Description:
+  File that creates an API for LAMBDA functions
+
+Parameters:
+
+  FuncAddPerson:
+    Type: String
+    Description: Insert Function
+
+  FuncGetPersona:
+    Type: String
+    Description: Get all people in the table
+  
+  FuncDeletePersona:
+    Type: String
+    Description: Delete in the table
+
+Resources:
+
+  RicardoAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: APIRicardo
+  
+  # /////////////////////////////////////////////////
+  InsertResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RicardoAPI
+      ParentId: !GetAtt 
+        - RicardoAPI
+        - RootResourceId
+      PathPart: addPersona
+  
+  AddPersonaMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      RestApiId: !Ref RicardoAPI
+      ResourceId: !Ref InsertResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub >-
+          arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FuncAddPerson}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+
+  PermisoAdd:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref FuncAddPerson
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RicardoAPI}/*/*/*
+
+  # /////////////////////////////////////////////////
+  GetResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RicardoAPI
+      ParentId: !GetAtt 
+        - RicardoAPI
+        - RootResourceId
+      PathPart: getPersonas
+  
+  GetPersonasMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      RestApiId: !Ref RicardoAPI
+      ResourceId: !Ref GetResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub >-
+          arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FuncGetPersona}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+
+  PermisoGet:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref FuncGetPersona
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RicardoAPI}/*/*/*
+  
+  # /////////////////////////////////////////////////
+  DeleteResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RicardoAPI
+      ParentId: !GetAtt 
+        - RicardoAPI
+        - RootResourceId
+      PathPart: deletePersona
+  
+  DeletePersonasMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      RestApiId: !Ref RicardoAPI
+      ResourceId: !Ref DeleteResource
+      HttpMethod: DELETE
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub >-
+          arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FuncDeletePersona}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+
+  PermisoDelete:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref FuncDeletePersona
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RicardoAPI}/*/*/*
+
+
+  DeploymentTest:
+    DependsOn: AddPersonaMethod
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      Description: API DEPLOYMENT
+      RestApiId: !Ref RicardoAPI
+      StageName: Final

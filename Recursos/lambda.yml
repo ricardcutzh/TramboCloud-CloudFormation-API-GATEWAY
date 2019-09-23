@@ -1,0 +1,125 @@
+Description:
+  File in charge of creating Lambda functions
+Parameters:
+
+  Bucket:
+    Type: String
+    Description:  Bucket where the Code is stored
+
+  IDTable:
+    Type: String
+    Description: Key's table
+  
+  Nametable:
+    Type: String
+    Description: name for the table
+
+Resources:
+
+  RoleLambda:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+            - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+              - lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+        - arn:aws:iam::aws:policy/AWSLambdaFullAccess
+
+  InsertData:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Code:
+        ZipFile: 
+          !Sub |
+            import json
+            import boto3
+            def lambda_handler(event, context):
+              client = boto3.resource('dynamodb')
+              table = client.Table("${Nametable}")
+              table.put_item(Item= {'${IDTable}': int(event['queryStringParameters']['${IDTable}']),'Name': event['queryStringParameters']['Name']})
+              return {
+                  "statusCode":200,
+                  "body": json.dumps('Insertado Correctamente')
+              }
+      Handler: "index.lambda_handler"
+      Role:
+        Fn::GetAtt:
+          - RoleLambda
+          - Arn
+      Runtime: "python3.7"
+  
+  GetData:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Code:
+        ZipFile: 
+          !Sub |
+            import json
+            import boto3
+            import decimal
+            class DecimalEncoder(json.JSONEncoder):
+              def default(self, o):
+                if isinstance(o, decimal.Decimal):
+                  if o % 1 > 0:
+                    return float(o)
+                  else:
+                    return int(o)
+                return super(DecimalEncoder, self).default(o)
+            def lambda_handler(event, context):
+              client = boto3.resource('dynamodb')
+              table = client.Table("${Nametable}")
+              r = table.scan(TableName='${Nametable}', Select='ALL_ATTRIBUTES')
+              return {
+                "statusCode":200,
+                "body": json.dumps(r["Items"], cls=DecimalEncoder)
+              }
+      Handler: "index.lambda_handler"
+      Role:
+        Fn::GetAtt:
+          - RoleLambda
+          - Arn
+      Runtime: "python3.7"
+
+  DeleteData:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Code:
+        ZipFile: 
+          !Sub |
+            import json
+            import boto3
+            def lambda_handler(event, context):
+              client = boto3.resource('dynamodb')
+              table = client.Table("${Nametable}")
+              table.delete_item(TableName='${Nametable}', Key={"${IDTable}":int(event['queryStringParameters']['${IDTable}'])})
+              return {
+                "statusCode":200,
+                "body": json.dumps('Item Deleted!')
+              }
+      Handler: "index.lambda_handler"
+      Role:
+        Fn::GetAtt:
+          - RoleLambda
+          - Arn
+      Runtime: "python3.7"
+
+Outputs:
+
+  InsertFunction:
+    Description: LambdaFunction to insert Data
+    Value: !GetAtt InsertData.Arn
+
+  GetFunction:
+    Description: Lambda function to get Data
+    Value: !GetAtt GetData.Arn
+
+  DeleteFunction:
+    Description: Lambda function to delete Data
+    Value: !GetAtt DeleteData.Arn
